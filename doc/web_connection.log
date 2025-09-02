@@ -1,0 +1,9 @@
+
+ http://testchat.smpbank.ru/l/v/track.php?
+ event=chat.start&
+ visit-session-id=e8b8cab5ea44488099d38910452fca48&
+ page-id=3cf6dcc664004b3ba4e5a7fc65eac423&
+ since=1&
+ auth-token=fe1883b5832b473ba43ec5c764ec8c26&
+ lang=ru&
+ callback=webimRequestCallback40950673335357140
