@@ -11,6 +11,8 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import java.io.File
+import java.net.URLConnection
 
 const val methodChannelName = "webim"
 const val eventMessageStreamName = "webim.stream"
@@ -45,6 +47,7 @@ class WebimPlugin : FlutterPlugin, MethodCallHandler {
             "resumeSession" -> resumeSession()
             "disposeSession" -> disposeSession()
             "sendMessage" -> sendMessage(call, result)
+            "sendFile" -> sendFile(call, result)
             "getLastMessages" -> getLastMessages(call, result)
             "getNextMessages" -> getNextMessages(call, result)
             else -> result.notImplemented()
@@ -103,6 +106,54 @@ class WebimPlugin : FlutterPlugin, MethodCallHandler {
         val messageId = session?.stream?.sendMessage(message)
 
         result.success(messageId.toString())
+    }
+
+    private fun sendFile(@NonNull call: MethodCall, @NonNull result: Result) {
+        try {
+            val filePath = call.argument<String>("FILE_PATH") ?: ""
+
+            if (filePath.isEmpty()) {
+                result.error("INVALID_ARGUMENT", "File path cannot be empty", null)
+                return
+            }
+
+            val file = File(filePath)
+
+            if (!file.exists()) {
+                result.error("FILE_NOT_FOUND", "File does not exist at path: $filePath", null)
+                return
+            }
+
+            val fileName = file.name
+
+            val mimeType = URLConnection.guessContentTypeFromName(fileName) ?: "application/octet-stream"
+
+
+            val webimSession = session ?: run {
+                result.error("SESSION_ERROR", "Webim session is not initialized", null)
+                return
+            }
+
+            webimSession.stream.sendFile(
+                file,
+                fileName,
+                mimeType,
+                object : MessageStream.SendFilesCallback {
+                    override fun onSuccess(messageId: Message.Id) {
+                        result.success(messageId)
+                    }
+
+                    override fun onFailure(
+                        messageId: Message.Id,
+                        error: WebimError<MessageStream.SendFileCallback.SendFileError?>
+                    ) {
+                        result.error("SEND_FILE_ERROR", error.errorString, null)
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            result.error("SEND_FILE_EXCEPTION", e.message, null)
+        }
     }
 
     private fun getLastMessages(@NonNull call: MethodCall, @NonNull result: Result) {

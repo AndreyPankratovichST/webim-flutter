@@ -66,6 +66,13 @@ class Webim {
     return response.toString();
   }
 
+  static Future<String> sendFile({
+    required String filePath,
+  }) async {
+    final response = await _channel.invokeMethod('sendFile', {'FILE_PATH': filePath});
+    return response.toString();
+  }
+
   static Future<List<Message>> getLastMessages({
     required int limit,
   }) async {

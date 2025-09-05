@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import WebimMobileSDK
+import UniformTypeIdentifiers
 
 let methodChannelName = "webim"
 let eventStreamChannelName = "webim.stream"
@@ -34,6 +35,8 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
             destroySession (result: result)
         case "sendMessage":
             sendMessage (call, result: result)
+        case "sendFile":
+            sendFile(call, result: result)
         case "getLastMessages":
             getLastMessages (call, result: result)
         case "getNextMessages":
@@ -144,6 +147,63 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
         
         result(response ?? "error")
     }
+
+    private func sendFile(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any] else {
+            result(FlutterError(
+                code: "INVALID_ARGUMENTS",
+                message: "Invalid arguments",
+                details: nil))
+            return
+        }
+
+        guard let filePath = args["filePath"] as? String else {
+            result(FlutterError(
+                code: "MISSING_PARAMS",
+                message: "Missing filePath",
+                details: nil))
+            return
+        }
+
+        let fileURL = URL(fileURLWithPath: filePath)
+
+        guard FileManager.default.fileExists(atPath: filePath) else {
+            result(FlutterError(
+                code: "FILE_NOT_EXIST",
+                message: "File does not exist at path: \(filePath)",
+                details: nil))
+            return
+        }
+
+        let fileName = fileURL.lastPathComponent
+
+        let mimeType = getMimeTypeForFile(url: fileURL) ?? "application/octet-stream"
+
+        guard let session = SwiftWebimPlugin.session else {
+            result(FlutterError(
+                code: "NO_SESSION",
+                message: "Webim session is not initialized",
+                details: nil))
+            return
+        }
+
+        do {
+            try session.getStream().send(
+                file: fileURL,
+                fileName: fileName,
+                mimeType: mimeType,
+                completionHandler: { messageID in
+                    result(messageID)
+                },
+                uploadTask: { _ in }
+            )
+        } catch {
+            result(FlutterError(
+                code: "SEND_FILE_ERROR",
+                message: "Failed to send file: \(error.localizedDescription)",
+                details: nil))
+        }
+    }
     
     private func buildSession(_ call: FlutterMethodCall, result: @escaping FlutterResult){
         if(SwiftWebimPlugin.session != nil){
@@ -207,6 +267,19 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
     // MARK: - WebimLogger
     public func log(entry: String) {
         print(entry)
+    }
+
+    private func getMimeTypeForFile(url: URL) -> String? {
+        if let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey]),
+           let utType = resourceValues.contentType {
+            return utType.preferredMIMEType
+        }
+
+        if let utType = UTType(filenameExtension: url.pathExtension) {
+            return utType.preferredMIMEType
+        }
+
+        return nil
     }
 }
 
