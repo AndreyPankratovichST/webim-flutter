@@ -138,7 +138,12 @@ class WebimPlugin : FlutterPlugin, MethodCallHandler {
                 file,
                 fileName,
                 mimeType,
-                object : MessageStream.SendFilesCallback {
+                object : MessageStream.SendFileCallback {
+                    override fun onProgress(
+                        id: Message.Id,
+                        sentBytes: Long
+                    ) {}
+
                     override fun onSuccess(messageId: Message.Id) {
                         result.success(messageId)
                     }

@@ -149,18 +149,11 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
     }
 
     private func sendFile(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let args = call.arguments as? [String: Any] else {
+        guard let args = call.arguments as? [String: Any],
+              let filePath = args["FILE_PATH"] as? String else {
             result(FlutterError(
                 code: "INVALID_ARGUMENTS",
-                message: "Invalid arguments",
-                details: nil))
-            return
-        }
-
-        guard let filePath = args["filePath"] as? String else {
-            result(FlutterError(
-                code: "MISSING_PARAMS",
-                message: "Missing filePath",
+                message: "Missing or invalid filePath parameter",
                 details: nil))
             return
         }
@@ -169,14 +162,13 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
 
         guard FileManager.default.fileExists(atPath: filePath) else {
             result(FlutterError(
-                code: "FILE_NOT_EXIST",
+                code: "FILE_NOT_FOUND",
                 message: "File does not exist at path: \(filePath)",
                 details: nil))
             return
         }
 
         let fileName = fileURL.lastPathComponent
-
         let mimeType = getMimeTypeForFile(url: fileURL) ?? "application/octet-stream"
 
         guard let session = SwiftWebimPlugin.session else {
@@ -188,14 +180,15 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
         }
 
         do {
+            let fileData = try Data(contentsOf: fileURL)
+
             try session.getStream().send(
-                file: fileURL,
+                file: fileData,
                 fileName: fileName,
                 mimeType: mimeType,
                 completionHandler: { messageID in
                     result(messageID)
-                },
-                uploadTask: { _ in }
+                }
             )
         } catch {
             result(FlutterError(
@@ -270,16 +263,39 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
     }
 
     private func getMimeTypeForFile(url: URL) -> String? {
-        if let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey]),
-           let utType = resourceValues.contentType {
-            return utType.preferredMIMEType
-        }
+        if #available(iOS 14.0, *) {
+            if let resourceValues = try? url.resourceValues(forKeys: [.contentTypeKey]),
+               let utType = resourceValues.contentType {
+                return utType.preferredMIMEType
+            }
 
-        if let utType = UTType(filenameExtension: url.pathExtension) {
-            return utType.preferredMIMEType
+            if let utType = UTType(filenameExtension: url.pathExtension) {
+                return utType.preferredMIMEType
+            }
+        } else {
+            let pathExtension = url.pathExtension.lowercased()
+            return getMimeTypeFromExtension(pathExtension)
         }
 
         return nil
+    }
+
+    private func getMimeTypeFromExtension(_ extension: String) -> String {
+        switch extension.lowercased() {
+            case "jpg", "jpeg": return "image/jpeg"
+            case "png": return "image/png"
+            case "gif": return "image/gif"
+            case "pdf": return "application/pdf"
+            case "doc", "docx": return "application/msword"
+            case "xls", "xlsx": return "application/vnd.ms-excel"
+            case "ppt", "pptx": return "application/vnd.ms-powerpoint"
+            case "txt": return "text/plain"
+            case "zip": return "application/zip"
+            case "mp3": return "audio/mpeg"
+            case "mp4": return "video/mp4"
+            case "mov": return "video/quicktime"
+            default: return "application/octet-stream"
+        }
     }
 }
 
