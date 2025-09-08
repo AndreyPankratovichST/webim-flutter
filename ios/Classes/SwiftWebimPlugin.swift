@@ -184,7 +184,7 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
 
             try session.getStream().send(
                 file: fileData,
-                fileName: fileName,
+                filename: fileName,
                 mimeType: mimeType,
                 completionHandler: { messageID in
                     result(messageID)
@@ -280,15 +280,18 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
         return nil
     }
 
-    private func getMimeTypeFromExtension(_ extension: String) -> String {
-        switch extension.lowercased() {
+    private func getMimeTypeFromExtension(_ fileExtension: String) -> String {
+        switch fileExtension.lowercased() {
             case "jpg", "jpeg": return "image/jpeg"
             case "png": return "image/png"
             case "gif": return "image/gif"
             case "pdf": return "application/pdf"
-            case "doc", "docx": return "application/msword"
-            case "xls", "xlsx": return "application/vnd.ms-excel"
-            case "ppt", "pptx": return "application/vnd.ms-powerpoint"
+            case "doc": return "application/msword"
+            case "docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            case "xls": return "application/vnd.ms-excel"
+            case "xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            case "ppt": return "application/vnd.ms-powerpoint"
+            case "pptx": return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             case "txt": return "text/plain"
             case "zip": return "application/zip"
             case "mp3": return "audio/mpeg"
