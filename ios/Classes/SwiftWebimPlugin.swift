@@ -182,13 +182,22 @@ public class SwiftWebimPlugin: NSObject, FlutterPlugin, WebimLogger {
         do {
             let fileData = try Data(contentsOf: fileURL)
 
+            let completionHandler = SendFileCompletionHandlerWrapper { messageID, error in
+                if let error = error {
+                    result(FlutterError(
+                        code: "SEND_FILE_ERROR",
+                        message: "Failed to send file: \(error.localizedDescription)",
+                        details: nil))
+                } else {
+                    result(messageID)
+                }
+            }
+
             try session.getStream().send(
                 file: fileData,
                 filename: fileName,
                 mimeType: mimeType,
-                completionHandler: { messageID in
-                    result(messageID)
-                }
+                completionHandler: completionHandler
             )
         } catch {
             result(FlutterError(
