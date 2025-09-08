@@ -145,14 +145,14 @@ class WebimPlugin : FlutterPlugin, MethodCallHandler {
                     ) {}
 
                     override fun onSuccess(messageId: Message.Id) {
-                        result.success(messageId)
+                        result.success(messageId.toString())
                     }
 
                     override fun onFailure(
                         messageId: Message.Id,
                         error: WebimError<MessageStream.SendFileCallback.SendFileError?>
                     ) {
-                        result.error("SEND_FILE_ERROR", error.errorString, null)
+                        result.error("SEND_FILE_ERROR", error.errorString, messageId.toString())
                     }
                 }
             )
