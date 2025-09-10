@@ -183,7 +183,164 @@ class WebimPlugin : FlutterPlugin, MethodCallHandler {
 
 private fun Message.toJson(): String {
     val gson = Gson()
-    return gson.toJson(this)
+
+    val attachmentInfo =  attachment?.let  { attachment ->
+        val filesInfo = attachment.filesInfo
+        val filesList = if (filesInfo.isNotEmpty()) {
+            filesInfo.map { fileInfo ->
+                convertFileInfoToMap(fileInfo)
+            }
+        } else {
+            emptyList<Map<String, Any?>>()
+        }
+
+        mapOf(
+            "state" to attachment.state.name,
+            "filesInfo" to convertFileInfoToMap(attachment.fileInfo),
+            "filesList" to filesList,
+            "errorType" to attachment.errorType,
+            "errorMessage" to attachment.errorMessage,
+            "visitorErrorMessage" to attachment.visitorErrorMessage,
+            "downloadProgress" to attachment.downloadProgress,
+            "extraText" to attachment.extraText
+        )
+    }
+
+    val quoteInfo = quote?.let { quote ->
+        mapOf(
+            "state" to quote.state.name,
+            "messageAttachment" to quote.messageAttachment?.let { convertFileInfoToMap(it) },
+            "messageId" to quote.messageId,
+            "messageType" to quote.messageType?.name,
+            "senderName" to quote.senderName,
+            "messageText" to quote.messageText,
+            "messageTimestamp" to quote.messageTimestamp,
+            "quotedMessageId" to quote.quotedMessageId
+        )
+    }
+
+    val keyboardInfo = keyboard?.let { keyboard ->
+        mapOf(
+            "buttons" to keyboard.buttons?.map { row ->
+                row.map { button ->
+                    mapOf(
+                        "id" to button.id,
+                        "text" to button.text,
+                        "configuration" to button.configuration?.let { config ->
+                            mapOf(
+                                "buttonType" to config.buttonType.name,
+                                "data" to config.data,
+                                "state" to config.state.name
+                            )
+                        },
+                        "params" to button.params?.let { params ->
+                            mapOf(
+                                "type" to params.type.name,
+                                "action" to params.action,
+                                "color" to params.color
+                            )
+                        }
+                    )
+                }
+            },
+            "state" to keyboard.state?.name,
+            "keyboardResponse" to keyboard.keyboardResponse?.let { response ->
+                mapOf(
+                    "buttonId" to response.buttonId,
+                    "messageId" to response.messageId
+                )
+            }
+        )
+    }
+
+    val keyboardRequestInfo = keyboardRequest?.let { request ->
+        mapOf(
+            "buttons" to request.buttons?.let { button ->
+                mapOf(
+                    "id" to button.id,
+                    "text" to button.text,
+                    "configuration" to button.configuration?.let { config ->
+                        mapOf(
+                            "buttonType" to config.buttonType.name,
+                            "data" to config.data,
+                            "state" to config.state.name
+                        )
+                    },
+                    "params" to button.params?.let { params ->
+                        mapOf(
+                            "type" to params.type.name,
+                            "action" to params.action,
+                            "color" to params.color
+                        )
+                    }
+                )
+            },
+            "messageId" to request.messageId
+        )
+    }
+
+    val stickerInfo = sticker?.let { sticker ->
+        mapOf(
+            "stickerId" to sticker.stickerId
+        )
+    }
+
+    val map = mapOf(
+        "clientSideId" to mapOf("id" to clientSideId.toString()),
+        "sessionId" to sessionId,
+        "serverSideId" to serverSideId,
+        "operatorId" to operatorId?.toString(),
+        "senderAvatarUrl" to senderAvatarUrl,
+        "senderName" to senderName,
+        "type" to type.name,
+        "time" to time,
+        "text" to text,
+        "sendStatus" to sendStatus.name,
+        "data" to data,
+        "savedInHistory" to isSavedInHistory,
+        "readByOperator" to isReadByOperator,
+        "canBeEdited" to canBeEdited(),
+        "canBeReplied" to canBeReplied(),
+        "edited" to isEdited,
+        "quote" to quoteInfo,
+        "reaction" to reaction?.name,
+        "canVisitorReact" to canVisitorReact(),
+        "canVisitorChangeReaction" to canVisitorChangeReaction(),
+        "groupData" to groupData?.let { groupData ->
+            mapOf(
+                "id" to groupData.id,
+                "msgCount" to groupData.msgCount,
+                "msgNumber" to groupData.msgNumber,
+            )
+        },
+        "keyboard" to keyboardInfo,
+        "keyboardRequest" to keyboardRequestInfo,
+        "sticker" to stickerInfo,
+        "attachment" to attachmentInfo
+    )
+
+    return gson.toJson(map)
+}
+
+private fun Message.convertFileInfoToMap(fileInfo: Message.FileInfo): Map<String, Any?> {
+    val imageInfo = fileInfo.imageInfo
+    val imageInfoMap = if (imageInfo != null) {
+        mapOf(
+            "thumbUrl" to imageInfo.thumbUrl,
+            "width" to imageInfo.width,
+            "height" to imageInfo.height
+        )
+    } else {
+        null
+    }
+
+    return mapOf(
+        "url" to fileInfo.url,
+        "size" to fileInfo.size,
+        "fileName" to fileInfo.fileName,
+        "contentType" to fileInfo.contentType,
+        "imageInfo" to imageInfoMap
+    )
 }
 
 private fun MutableList<out Message>.toJson(): String {
